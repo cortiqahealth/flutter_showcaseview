@@ -379,20 +379,21 @@ class _ShowcaseState extends State<Showcase> {
   Size? rootWidgetSize;
   RenderBox? rootRenderObject;
 
-  late final showCaseWidgetState = ShowCaseWidget.of(context);
+  ShowCaseWidgetState get showCaseWidgetState => ShowCaseWidget.of(context);
 
   @override
   void initState() {
     super.initState();
-    initRootWidget();
+    if (mounted) {
+      initRootWidget();
+      recalculateRootWidgetSize();
+    }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _enableShowcase = showCaseWidgetState.enableShowcase;
-
-    recalculateRootWidgetSize();
 
     if (_enableShowcase) {
       final size = MediaQuery.of(context).size;
@@ -556,9 +557,7 @@ class _ShowcaseState extends State<Showcase> {
             clipper: RRectClipper(
               area: _isScrollRunning ? Rect.zero : rectBound,
               isCircle: widget.targetShapeBorder is CircleBorder,
-              radius: _isScrollRunning
-                  ? BorderRadius.zero
-                  : widget.targetBorderRadius,
+              radius: widget.targetBorderRadius,
               overlayPadding:
                   _isScrollRunning ? EdgeInsets.zero : widget.targetPadding,
             ),
@@ -596,40 +595,48 @@ class _ShowcaseState extends State<Showcase> {
             shapeBorder: widget.targetShapeBorder,
             disableDefaultChildGestures: widget.disableDefaultTargetGestures,
           ),
-          ToolTipWidget(
-            position: position,
-            offset: offset,
-            screenSize: screenSize,
-            title: widget.title,
-            titleAlignment: widget.titleAlignment,
-            description: widget.description,
-            descriptionAlignment: widget.descriptionAlignment,
-            titleTextStyle: widget.titleTextStyle,
-            descTextStyle: widget.descTextStyle,
-            container: widget.container,
-            tooltipBackgroundColor: widget.tooltipBackgroundColor,
-            textColor: widget.textColor,
-            showArrow: widget.showArrow,
-            contentHeight: widget.height,
-            contentWidth: widget.width,
-            onTooltipTap: _getOnTooltipTap,
-            tooltipPadding: widget.tooltipPadding,
-            disableMovingAnimation: widget.disableMovingAnimation ??
-                showCaseWidgetState.disableMovingAnimation,
-            disableScaleAnimation: widget.disableScaleAnimation ??
-                showCaseWidgetState.disableScaleAnimation,
-            movingAnimationDuration: widget.movingAnimationDuration,
-            tooltipBorderRadius: widget.tooltipBorderRadius,
-            scaleAnimationDuration: widget.scaleAnimationDuration,
-            scaleAnimationCurve: widget.scaleAnimationCurve,
-            scaleAnimationAlignment: widget.scaleAnimationAlignment,
-            isTooltipDismissed: _isTooltipDismissed,
-            tooltipPosition: widget.tooltipPosition,
-            titlePadding: widget.titlePadding,
-            descriptionPadding: widget.descriptionPadding,
-            titleTextDirection: widget.titleTextDirection,
-            descriptionTextDirection: widget.descriptionTextDirection,
-            toolTipSlideEndDistance: widget.toolTipSlideEndDistance,
+          ClipPath(
+            clipper: RRectClipper(
+              area: _isScrollRunning ? Rect.zero : rectBound,
+              isCircle: widget.targetShapeBorder is CircleBorder,
+              radius: widget.targetBorderRadius,
+              overlayPadding:
+                  _isScrollRunning ? EdgeInsets.zero : widget.targetPadding,
+            ),
+            child: ToolTipWidget(
+              position: position,
+              offset: offset,
+              screenSize: screenSize,
+              title: widget.title,
+              titleAlignment: widget.titleAlignment,
+              description: widget.description,
+              descriptionAlignment: widget.descriptionAlignment,
+              titleTextStyle: widget.titleTextStyle,
+              descTextStyle: widget.descTextStyle,
+              container: widget.container,
+              tooltipBackgroundColor: widget.tooltipBackgroundColor,
+              textColor: widget.textColor,
+              showArrow: widget.showArrow,
+              contentHeight: widget.height,
+              contentWidth: widget.width,
+              onTooltipTap: _getOnTooltipTap,
+              tooltipPadding: widget.tooltipPadding,
+              disableMovingAnimation: widget.disableMovingAnimation ??
+                  showCaseWidgetState.disableMovingAnimation,
+              disableScaleAnimation: widget.disableScaleAnimation ??
+                  showCaseWidgetState.disableScaleAnimation,
+              movingAnimationDuration: widget.movingAnimationDuration,
+              tooltipBorderRadius: widget.tooltipBorderRadius,
+              scaleAnimationDuration: widget.scaleAnimationDuration,
+              scaleAnimationCurve: widget.scaleAnimationCurve,
+              scaleAnimationAlignment: widget.scaleAnimationAlignment,
+              isTooltipDismissed: _isTooltipDismissed,
+              tooltipPosition: widget.tooltipPosition,
+              titlePadding: widget.titlePadding,
+              descriptionPadding: widget.descriptionPadding,
+              titleTextDirection: widget.titleTextDirection,
+              descriptionTextDirection: widget.descriptionTextDirection,
+            ),
           ),
         ],
       ],

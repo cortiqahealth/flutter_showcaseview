@@ -115,7 +115,10 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
   late final Animation<double> _movingAnimation;
   late final AnimationController _scaleAnimationController;
   late final Animation<double> _scaleAnimation;
-
+  late final Animation<double> fadeInFadeOut2;
+  late final Animation<double> fadeInFadeOut;
+  late final AnimationController controller2;
+  late final AnimationController controller;
   double tooltipWidth = 0;
   double tooltipScreenEdgePadding = 20;
   double tooltipTextPadding = 15;
@@ -269,13 +272,40 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
         });
       }
     });
+    controller = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+      animationBehavior: AnimationBehavior.preserve,
+      value: 0.0,
+    );
+
+    controller.forward();
+
+    fadeInFadeOut = CurvedAnimation(
+      parent: controller,
+      curve: Curves.easeOut,
+    );
+
+    controller2 = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+      animationBehavior: AnimationBehavior.preserve,
+      value: 0.0,
+    );
+
+    controller2.forward();
+
+    fadeInFadeOut2 = CurvedAnimation(
+      parent: controller,
+      curve: Curves.easeOut,
+    );
     _movingAnimationController = AnimationController(
       duration: widget.movingAnimationDuration,
       vsync: this,
     );
     _movingAnimation = CurvedAnimation(
       parent: _movingAnimationController,
-      curve: Curves.easeInOut,
+      curve: Curves.easeOut,
     );
     _scaleAnimationController = AnimationController(
       duration: widget.scaleAnimationDuration,
@@ -329,6 +359,8 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
 
   @override
   void dispose() {
+    controller.dispose();
+    controller2.dispose();
     _movingAnimationController.dispose();
     _scaleAnimationController.dispose();
 
@@ -352,7 +384,7 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
         contentOffsetMultiplier.clamp(-1.0, 0.0);
 
     var paddingTop = isArrowUp ? 22.0 : 0.0;
-    var paddingBottom = isArrowUp ? 0.0 : 22.0;
+    var paddingBottom = isArrowUp ? 0.0 : 27.0;
 
     if (!widget.showArrow) {
       paddingTop = 10;
@@ -380,13 +412,10 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
               ),
           child: FractionalTranslation(
             translation: Offset(0.0, contentFractionalOffset as double),
-            child: ToolTipSlideTransition(
+            child: SlideTransition(
               position: Tween<Offset>(
-                begin: Offset.zero,
-                end: Offset(
-                  0,
-                  widget.toolTipSlideEndDistance * contentOffsetMultiplier,
-                ),
+                begin: Offset(0.0, contentFractionalOffset / 10),
+                end: const Offset(0.0, 0.100),
               ).animate(_movingAnimation),
               child: Material(
                 type: MaterialType.transparency,
@@ -494,36 +523,52 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
         ),
       );
     }
+
     return Stack(
+      clipBehavior: Clip.antiAlias,
       children: <Widget>[
         Positioned(
           left: _getSpace(),
-          top: contentY - (10 * contentOffsetMultiplier),
-          child: FractionalTranslation(
-            translation: Offset(0.0, contentFractionalOffset as double),
-            child: ToolTipSlideTransition(
-              position: Tween<Offset>(
-                begin: Offset.zero,
-                end: Offset(
-                  0,
-                  widget.toolTipSlideEndDistance * contentOffsetMultiplier,
-                ),
-              ).animate(_movingAnimation),
-              child: Material(
-                color: Colors.transparent,
-                child: GestureDetector(
-                  onTap: widget.onTooltipTap,
+          top: contentY - 10,
+          child: Material(
+            color: Colors.transparent,
+            child: ScaleTransition(
+              alignment: Alignment.topCenter,
+              scale: fadeInFadeOut,
+              child: GestureDetector(
+                onTap: widget.onTooltipTap,
+                child: Transform.scale(
+                  alignment: Alignment.bottomLeft,
+                  scale: 1.2,
                   child: Container(
-                    padding: EdgeInsets.only(
-                      top: paddingTop,
-                      bottom: paddingBottom,
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.width,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Color(0xFFF6FBFF),
                     ),
-                    color: Colors.transparent,
-                    child: Center(
-                      child: MeasureSize(
-                        onSizeChange: onSizeChange,
-                        child: widget.container,
-                      ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: _getSpace(),
+          top: contentY,
+          child: Material(
+            color: Colors.transparent,
+            child: GestureDetector(
+              onTap: widget.onTooltipTap,
+              child: FadeTransition(
+                opacity: fadeInFadeOut2,
+                child: Transform.scale(
+                  scale: 1.0,
+                  alignment: Alignment.bottomLeft,
+                  child: Center(
+                    child: MeasureSize(
+                      onSizeChange: onSizeChange,
+                      child: widget.container,
                     ),
                   ),
                 ),
@@ -545,8 +590,6 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
     final textPainter = TextPainter(
       text: TextSpan(text: text, style: style),
       maxLines: 1,
-      // TODO: replace this once we support sdk v3.12.
-      // ignore: deprecated_member_use
       textScaleFactor: MediaQuery.of(context).textScaleFactor,
       textDirection: TextDirection.ltr,
     )..layout();
