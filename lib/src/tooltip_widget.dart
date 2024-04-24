@@ -543,9 +543,9 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
                   child: Container(
                     width: MediaQuery.of(context).size.width,
                     height: MediaQuery.of(context).size.width,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Color(0xFFF6FBFF),
+                      color: const Color(0xFFF6FBFF).withOpacity(0.7),
                     ),
                   ),
                 ),
