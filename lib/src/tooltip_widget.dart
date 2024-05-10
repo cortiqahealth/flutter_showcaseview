@@ -25,10 +25,12 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
+import '../showcaseview.dart';
 import 'enum.dart';
 import 'extension.dart';
 import 'get_position.dart';
 import 'measure_size.dart';
+import 'themes/custom_text_theme.dart';
 import 'widget/tooltip_slide_transition.dart';
 
 const _kDefaultPaddingFromParent = 14.0;
@@ -47,8 +49,8 @@ class ToolTipWidget extends StatefulWidget {
   final Color? tooltipBackgroundColor;
   final Color? textColor;
   final bool showArrow;
-  final double? contentHeight;
-  final double? contentWidth;
+  final double contentHeight;
+  final double contentWidth;
   final VoidCallback? onTooltipTap;
   final EdgeInsets? tooltipPadding;
   final Duration movingAnimationDuration;
@@ -66,6 +68,17 @@ class ToolTipWidget extends StatefulWidget {
   final TextDirection? descriptionTextDirection;
   final double toolTipSlideEndDistance;
 
+  /// context of the screen
+  final BuildContext showCaseContext;
+
+  /// text displayed in Button
+  final String buttonText;
+
+  /// used to hide skipButton
+  final bool showSkipButton;
+
+  /// to show double layers
+  final bool showDoubleLayer;
   const ToolTipWidget({
     Key? key,
     required this.position,
@@ -80,8 +93,8 @@ class ToolTipWidget extends StatefulWidget {
     required this.tooltipBackgroundColor,
     required this.textColor,
     required this.showArrow,
-    required this.contentHeight,
-    required this.contentWidth,
+    this.contentHeight = 10,
+    this.contentWidth = double.infinity,
     required this.onTooltipTap,
     required this.movingAnimationDuration,
     required this.descriptionAlignment,
@@ -99,6 +112,10 @@ class ToolTipWidget extends StatefulWidget {
     this.titleTextDirection,
     this.descriptionTextDirection,
     this.toolTipSlideEndDistance = 7,
+    required this.showCaseContext,
+    this.buttonText = 'Next',
+    this.showSkipButton = true,
+    this.showDoubleLayer = true,
   }) : super(key: key);
 
   @override
@@ -125,7 +142,7 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
 
   TooltipPosition findPositionForContent(Offset position) {
     var height = 120.0;
-    height = widget.contentHeight ?? height;
+    height = height;
     final bottomPosition =
         position.dy + ((widget.position?.getHeight() ?? 0) / 2);
     final topPosition = position.dy - ((widget.position?.getHeight() ?? 0) / 2);
@@ -134,7 +151,9 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
     // ignore: deprecated_member_use
     final EdgeInsets viewInsets = EdgeInsets.fromWindowPadding(
       // ignore: deprecated_member_use
-      ambiguate(WidgetsBinding.instance)?.window.viewInsets ?? ViewPadding.zero,
+      ambiguate(WidgetsBinding.instance)?.window.viewInsets ??
+          // ignore: deprecated_member_use
+          WindowPadding.zero,
       // ignore: deprecated_member_use
       ambiguate(WidgetsBinding.instance)?.window.devicePixelRatio ?? 1,
     );
@@ -142,22 +161,25 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
         widget.screenSize.height - viewInsets.bottom;
     final hasSpaceInBottom =
         (actualVisibleScreenHeight - bottomPosition) >= height;
-    return widget.tooltipPosition ??
-        (hasSpaceInTop && !hasSpaceInBottom
-            ? TooltipPosition.top
-            : TooltipPosition.bottom);
+    return (hasSpaceInTop && !hasSpaceInBottom
+        ? TooltipPosition.top
+        : TooltipPosition.bottom);
   }
 
   void _getTooltipWidth() {
     final titleStyle = widget.titleTextStyle ??
         Theme.of(context)
             .textTheme
-            .titleLarge!
+            // TODO: replace once support for 3.1.0 and above is provided.
+            // ignore: deprecated_member_use
+            .headline6!
             .merge(TextStyle(color: widget.textColor));
     final descriptionStyle = widget.descTextStyle ??
         Theme.of(context)
             .textTheme
-            .titleSmall!
+            // TODO: replace once support for 3.1.0 and above is provided.
+            // ignore: deprecated_member_use
+            .subtitle2!
             .merge(TextStyle(color: widget.textColor));
     final titleLength = widget.title == null
         ? 0
@@ -183,8 +205,7 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
 
   double? _getLeft() {
     if (widget.position != null) {
-      final width =
-          widget.container != null ? _customContainerWidth.value : tooltipWidth;
+      final width = tooltipWidth;
       double leftPositionValue = widget.position!.getCenter() - (width * 0.5);
       if ((leftPositionValue + width) > widget.screenSize.width) {
         return null;
@@ -199,8 +220,7 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
 
   double? _getRight() {
     if (widget.position != null) {
-      final width =
-          widget.container != null ? _customContainerWidth.value : tooltipWidth;
+      final width = tooltipWidth;
 
       final left = _getLeft();
       if (left == null || (left + width) > widget.screenSize.width) {
@@ -235,8 +255,7 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
         ? (widget.screenSize.width - widget.position!.getCenter()) -
             (_getRight() ?? 0)
         : 0;
-    final containerWidth =
-        widget.container != null ? _customContainerWidth.value : tooltipWidth;
+    final containerWidth = tooltipWidth;
 
     if (left != 0) {
       return (-1 + (2 * (left / containerWidth)));
@@ -260,18 +279,18 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.container != null &&
-          _customContainerKey.currentContext != null &&
-          _customContainerKey.currentContext?.size != null) {
-        // TODO: Is it wise to call setState here? All it is doing is setting
-        // a value in ValueNotifier which does not require a setState to refresh anyway.
-        setState(() {
-          _customContainerWidth.value =
-              _customContainerKey.currentContext!.size!.width;
-        });
-      }
-    });
+    // ambiguate(WidgetsBinding.instance)?.addPostFrameCallback((_) {
+    //   if (widget.container != null &&
+    //       _customContainerKey.currentContext != null &&
+    //       _customContainerKey.currentContext?.size != null) {
+    //     // TODO: Is it wise to call setState here? All it is doing is setting
+    //     // a value in ValueNotifier which does not require a setState to refresh anyway.
+    //     setState(() {
+    //       _customContainerWidth.value =
+    //           _customContainerKey.currentContext!.size!.width;
+    //     });
+    //   }
+    // });
     controller = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -384,7 +403,7 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
         contentOffsetMultiplier.clamp(-1.0, 0.0);
 
     var paddingTop = isArrowUp ? 22.0 : 0.0;
-    var paddingBottom = isArrowUp ? 0.0 : 27.0;
+    var paddingBottom = isArrowUp ? 0.0 : 22.0;
 
     if (!widget.showArrow) {
       paddingTop = 10;
@@ -399,185 +418,359 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
     }
 
     if (widget.container == null) {
-      return Positioned(
-        top: contentY,
-        left: _getLeft(),
-        right: _getRight(),
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          alignment: widget.scaleAnimationAlignment ??
-              Alignment(
-                _getAlignmentX(),
-                _getAlignmentY(),
-              ),
-          child: FractionalTranslation(
-            translation: Offset(0.0, contentFractionalOffset as double),
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: Offset(0.0, contentFractionalOffset / 10),
-                end: const Offset(0.0, 0.100),
-              ).animate(_movingAnimation),
-              child: Material(
-                type: MaterialType.transparency,
-                child: Container(
-                  padding: widget.showArrow
-                      ? EdgeInsets.only(
-                          top: paddingTop - (isArrowUp ? arrowHeight : 0),
-                          bottom: paddingBottom - (isArrowUp ? 0 : arrowHeight),
-                        )
-                      : null,
-                  child: Stack(
-                    alignment: isArrowUp
-                        ? Alignment.topLeft
-                        : _getLeft() == null
-                            ? Alignment.bottomRight
-                            : Alignment.bottomLeft,
-                    children: [
-                      if (widget.showArrow)
-                        Positioned(
-                          left: _getArrowLeft(arrowWidth),
-                          right: _getArrowRight(arrowWidth),
-                          child: CustomPaint(
-                            painter: _Arrow(
-                              strokeColor: widget.tooltipBackgroundColor!,
-                              strokeWidth: 10,
-                              paintingStyle: PaintingStyle.fill,
-                              isUpArrow: isArrowUp,
-                            ),
-                            child: const SizedBox(
-                              height: arrowHeight,
-                              width: arrowWidth,
-                            ),
-                          ),
-                        ),
-                      Padding(
-                        padding: EdgeInsets.only(
-                          top: isArrowUp ? arrowHeight - 1 : 0,
-                          bottom: isArrowUp ? 0 : arrowHeight - 1,
-                        ),
-                        child: ClipRRect(
-                          borderRadius: widget.tooltipBorderRadius ??
-                              BorderRadius.circular(8.0),
-                          child: GestureDetector(
-                            onTap: widget.onTooltipTap,
+      return Stack(
+        children: [
+          Positioned(
+            top: contentY,
+            left: _getLeft(),
+            right: _getRight(),
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              alignment: widget.scaleAnimationAlignment ??
+                  Alignment(
+                    _getAlignmentX(),
+                    _getAlignmentY(),
+                  ),
+              child: FractionalTranslation(
+                translation: Offset(0.0, contentFractionalOffset as double),
+                child: ToolTipSlideTransition(
+                  position: Tween<Offset>(
+                    begin: Offset.zero,
+                    end: Offset(
+                      0,
+                      widget.toolTipSlideEndDistance * contentOffsetMultiplier,
+                    ),
+                  ).animate(_movingAnimation),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Stack(
+                      alignment: isArrowUp
+                          ? Alignment.topLeft
+                          : _getLeft() == null
+                              ? Alignment.bottomRight
+                              : Alignment.bottomLeft,
+                      children: [
+                        GestureDetector(
+                          onTap: widget.onTooltipTap,
+                          child: Transform.scale(
+                            scale: 1.2,
                             child: Container(
-                              width: tooltipWidth,
-                              padding: widget.tooltipPadding,
-                              color: widget.tooltipBackgroundColor,
-                              child: Column(
-                                crossAxisAlignment: widget.title != null
-                                    ? CrossAxisAlignment.start
-                                    : CrossAxisAlignment.center,
-                                children: <Widget>[
-                                  if (widget.title != null)
-                                    Padding(
-                                      padding: widget.titlePadding ??
-                                          EdgeInsets.zero,
-                                      child: Text(
-                                        widget.title!,
-                                        textAlign: widget.titleAlignment,
-                                        textDirection:
-                                            widget.titleTextDirection,
-                                        style: widget.titleTextStyle ??
-                                            Theme.of(context)
-                                                .textTheme
-                                                .titleLarge!
-                                                .merge(
-                                                  TextStyle(
-                                                    color: widget.textColor,
-                                                  ),
-                                                ),
-                                      ),
-                                    ),
-                                  Padding(
-                                    padding: widget.descriptionPadding ??
-                                        EdgeInsets.zero,
-                                    child: Text(
-                                      widget.description!,
-                                      textAlign: widget.descriptionAlignment,
-                                      textDirection:
-                                          widget.descriptionTextDirection,
-                                      style: widget.descTextStyle ??
-                                          Theme.of(context)
-                                              .textTheme
-                                              .titleSmall!
-                                              .merge(
-                                                TextStyle(
-                                                  color: widget.textColor,
-                                                ),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: widget.tooltipBackgroundColor,
+                              ),
+                              width: MediaQuery.of(context).size.width,
+                              height: MediaQuery.of(context).size.width,
+                              // padding: widget.tooltipPadding,
+                              child: Center(
+                                child: Padding(
+                                  padding: widget.descriptionPadding ??
+                                      EdgeInsets.zero,
+                                  child: Text(
+                                    "tooltip",
+                                    textAlign: widget.descriptionAlignment,
+                                    textDirection:
+                                        widget.descriptionTextDirection,
+                                    style: widget.descTextStyle ??
+                                        Theme.of(context)
+                                            .textTheme
+                                            // TODO: replace once support for 3.1.0 and above is provided.
+                                            // ignore: deprecated_member_use
+                                            .subtitle2!
+                                            .merge(
+                                              TextStyle(
+                                                color: widget.textColor,
                                               ),
-                                    ),
+                                            ),
                                   ),
-                                ],
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        ],
       );
     }
-
-    return Stack(
-      clipBehavior: Clip.antiAlias,
-      children: <Widget>[
-        Positioned(
-          left: _getSpace(),
-          top: contentY - 10,
-          child: Material(
-            color: Colors.transparent,
+    if (widget.showDoubleLayer) {
+      return Stack(
+        clipBehavior: Clip.antiAlias,
+        children: [
+          Positioned(
+            left: _getSpace(),
+            top: contentY - 10,
             child: ScaleTransition(
-              alignment: Alignment.topCenter,
-              scale: fadeInFadeOut,
-              child: GestureDetector(
-                onTap: widget.onTooltipTap,
-                child: Transform.scale(
-                  alignment: Alignment.bottomLeft,
-                  scale: 1.2,
-                  child: Container(
-                    width: MediaQuery.of(context).size.width,
-                    height: MediaQuery.of(context).size.width,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFFF6FBFF).withOpacity(0.7),
+              scale: _scaleAnimation,
+              alignment: widget.scaleAnimationAlignment ??
+                  Alignment(
+                    _getAlignmentX(),
+                    _getAlignmentY(),
+                  ),
+              child: FractionalTranslation(
+                translation: Offset(0.0, contentFractionalOffset as double),
+                child: ToolTipSlideTransition(
+                  position: Tween<Offset>(
+                    begin: Offset.zero,
+                    end: Offset(
+                      0,
+                      widget.toolTipSlideEndDistance * contentOffsetMultiplier,
+                    ),
+                  ).animate(_movingAnimation),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Stack(
+                      alignment: isArrowUp
+                          ? Alignment.topLeft
+                          : _getLeft() == null
+                              ? Alignment.bottomRight
+                              : Alignment.bottomLeft,
+                      children: [
+                        GestureDetector(
+                          onTap: widget.onTooltipTap,
+                          child: Transform.scale(
+                            scale: 1.2,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppColors.ghostWhite.withOpacity(0.7),
+                              ),
+                              width: MediaQuery.of(context).size.width,
+                              height: MediaQuery.of(context).size.width,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-        Positioned(
-          left: _getSpace(),
-          top: contentY,
-          child: Material(
-            color: Colors.transparent,
-            child: GestureDetector(
-              onTap: widget.onTooltipTap,
-              child: FadeTransition(
-                opacity: fadeInFadeOut2,
-                child: Transform.scale(
-                  scale: 1.0,
-                  alignment: Alignment.bottomLeft,
-                  child: Center(
-                    child: MeasureSize(
-                      onSizeChange: onSizeChange,
-                      child: widget.container,
+          Positioned(
+            top: contentY,
+            left: _getSpace(),
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              alignment: widget.scaleAnimationAlignment ??
+                  Alignment(
+                    _getAlignmentX(),
+                    _getAlignmentY(),
+                  ),
+              child: FractionalTranslation(
+                translation: Offset(0.0, contentFractionalOffset),
+                child: ToolTipSlideTransition(
+                  position: Tween<Offset>(
+                    begin: Offset.zero,
+                    end: Offset(
+                      0,
+                      widget.toolTipSlideEndDistance * contentOffsetMultiplier,
+                    ),
+                  ).animate(_movingAnimation),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Stack(
+                      alignment: isArrowUp
+                          ? Alignment.topLeft
+                          : _getLeft() == null
+                              ? Alignment.bottomRight
+                              : Alignment.bottomLeft,
+                      children: [
+                        GestureDetector(
+                          onTap: widget.onTooltipTap,
+                          child: Transform.scale(
+                            scale: 1.0,
+                            child: Container(
+                              alignment: Alignment.center,
+                              width: MediaQuery.of(context).size.width,
+                              decoration: const BoxDecoration(
+                                borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(100),
+                                    bottomLeft: Radius.circular(100)),
+                                color: AppColors.aliceBlue,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 50,
+                                  vertical: 50,
+                                ),
+                                child: Column(
+                                  children: [
+                                    Text(
+                                      widget.description ?? '',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: AppColors.black,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                      textAlign: TextAlign.start,
+                                    ),
+                                    const SizedBox(
+                                      height: 20,
+                                    ),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        widget.showSkipButton
+                                            ? Row(
+                                                children: [
+                                                  IconButton(
+                                                    onPressed: () =>
+                                                        ShowCaseWidget.of(widget
+                                                                .showCaseContext)
+                                                            .dismiss(),
+                                                    icon: Text(
+                                                      'Skip',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .buttonTextInActive
+                                                          ?.copyWith(
+                                                            fontWeight:
+                                                                FontWeight.w900,
+                                                            decoration:
+                                                                TextDecoration
+                                                                    .underline,
+                                                            decorationColor:
+                                                                AppColors
+                                                                    .steelTeal,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(
+                                                    width: 30,
+                                                  ),
+                                                ],
+                                              )
+                                            : const SizedBox.shrink(),
+                                        IconButton(
+                                          onPressed: () => ShowCaseWidget.of(
+                                                  widget.showCaseContext)
+                                              .next(),
+                                          icon: Row(
+                                            children: [
+                                              Text(
+                                                widget.buttonText,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .buttonTextInActive
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                    ),
+                                              ),
+                                              const Icon(
+                                                Icons.arrow_forward_rounded,
+                                                color: AppColors.steelTeal,
+                                              )
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          )
+        ],
+      );
+    } else {
+      return Stack(
+        children: [
+          Positioned(
+            top: contentY + 15,
+            left: _getLeft(),
+            right: _getRight(),
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              alignment: widget.scaleAnimationAlignment ??
+                  Alignment(
+                    _getAlignmentX(),
+                    _getAlignmentY(),
+                  ),
+              child: FractionalTranslation(
+                translation: Offset(0.0, contentFractionalOffset as double),
+                child: ToolTipSlideTransition(
+                  position: Tween<Offset>(
+                    begin: Offset.zero,
+                    end: Offset(
+                      0,
+                      widget.toolTipSlideEndDistance * contentOffsetMultiplier,
+                    ),
+                  ).animate(_movingAnimation),
+                  child: Material(
+                    type: MaterialType.transparency,
+                    child: Stack(
+                      alignment: isArrowUp
+                          ? Alignment.topLeft
+                          : _getLeft() == null
+                              ? Alignment.bottomRight
+                              : Alignment.bottomLeft,
+                      children: [
+                        GestureDetector(
+                          onTap: widget.onTooltipTap,
+                          child: Transform.scale(
+                            scale: 1.2,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: widget.tooltipBackgroundColor,
+                              ),
+                              width: MediaQuery.of(context).size.width,
+                              height: MediaQuery.of(context).size.width,
+                              // padding: widget.tooltipPadding,
+                              child: Center(
+                                child: MeasureSize(
+                                  onSizeChange: onSizeChange,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 50,
+                                      vertical: 50,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        widget.description ?? '',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              color: AppColors.black,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                        textAlign: TextAlign.start,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    }
   }
 
   void onSizeChange(Size? size) {
@@ -590,6 +783,8 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
     final textPainter = TextPainter(
       text: TextSpan(text: text, style: style),
       maxLines: 1,
+      // TODO: replace this once we support sdk v3.12.
+      // ignore: deprecated_member_use
       textScaleFactor: MediaQuery.of(context).textScaleFactor,
       textDirection: TextDirection.ltr,
     )..layout();

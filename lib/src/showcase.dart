@@ -253,6 +253,17 @@ class Showcase extends StatefulWidget {
   /// Defaults to 7.
   final double toolTipSlideEndDistance;
 
+  /// context of the screen
+  final BuildContext showCaseContext;
+
+  /// text displayed in Button
+  final String buttonText;
+
+  /// used to hide skipButton
+  final bool showSkipButton;
+
+  /// to show double layer
+  final bool showDoubleLayer;
   const Showcase({
     required this.key,
     required this.description,
@@ -299,9 +310,13 @@ class Showcase extends StatefulWidget {
     this.onBarrierClick,
     this.disableBarrierInteraction = false,
     this.toolTipSlideEndDistance = 7,
+    required this.showCaseContext,
   })  : height = null,
         width = null,
         container = null,
+        buttonText = '',
+        showSkipButton = false,
+        showDoubleLayer = false,
         assert(overlayOpacity >= 0.0 && overlayOpacity <= 1.0,
             "overlay opacity must be between 0 and 1."),
         assert(onTargetClick == null || disposeOnTap != null,
@@ -313,55 +328,63 @@ class Showcase extends StatefulWidget {
 
   const Showcase.withWidget({
     required this.key,
-    required this.height,
-    required this.width,
+    required this.showCaseContext,
+    this.buttonText = 'Next',
+    this.description = '',
+    this.showSkipButton = true,
     required this.container,
     required this.child,
+    required this.showDoubleLayer,
+    this.title,
+    this.titleAlignment = TextAlign.start,
+    this.descriptionAlignment = TextAlign.start,
     this.targetShapeBorder = const RoundedRectangleBorder(
-      borderRadius: BorderRadius.all(
-        Radius.circular(8),
-      ),
+      borderRadius: BorderRadius.all(Radius.circular(8)),
     ),
     this.overlayColor = Colors.black45,
-    this.targetBorderRadius,
     this.overlayOpacity = 0.75,
+    this.titleTextStyle,
+    this.descTextStyle,
+    this.tooltipBackgroundColor = Colors.white,
+    this.textColor = Colors.black,
     this.scrollLoadingWidget = const CircularProgressIndicator(
-        valueColor: AlwaysStoppedAnimation(Colors.white)),
+      valueColor: AlwaysStoppedAnimation(Colors.white),
+    ),
+    this.showArrow = true,
     this.onTargetClick,
     this.disposeOnTap,
     this.movingAnimationDuration = const Duration(milliseconds: 2000),
     this.disableMovingAnimation,
+    this.disableScaleAnimation,
+    this.tooltipPadding =
+        const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+    this.onToolTipClick,
     this.targetPadding = EdgeInsets.zero,
     this.blurValue,
+    this.targetBorderRadius,
     this.onTargetLongPress,
     this.onTargetDoubleTap,
+    this.tooltipBorderRadius,
     this.disableDefaultTargetGestures = false,
+    this.scaleAnimationDuration = const Duration(milliseconds: 300),
+    this.scaleAnimationCurve = Curves.easeIn,
+    this.scaleAnimationAlignment,
     this.tooltipPosition,
+    this.titlePadding,
+    this.descriptionPadding,
+    this.titleTextDirection,
+    this.descriptionTextDirection,
     this.onBarrierClick,
     this.disableBarrierInteraction = false,
     this.toolTipSlideEndDistance = 7,
-  })  : showArrow = false,
-        onToolTipClick = null,
-        scaleAnimationDuration = const Duration(milliseconds: 300),
-        scaleAnimationCurve = Curves.decelerate,
-        scaleAnimationAlignment = null,
-        disableScaleAnimation = null,
-        title = null,
-        description = null,
-        titleAlignment = TextAlign.start,
-        descriptionAlignment = TextAlign.start,
-        titleTextStyle = null,
-        descTextStyle = null,
-        tooltipBackgroundColor = Colors.white,
-        textColor = Colors.black,
-        tooltipBorderRadius = null,
-        tooltipPadding = const EdgeInsets.symmetric(vertical: 8),
-        titlePadding = null,
-        descriptionPadding = null,
-        titleTextDirection = null,
-        descriptionTextDirection = null,
+  })  : height = null,
+        width = null,
         assert(overlayOpacity >= 0.0 && overlayOpacity <= 1.0,
             "overlay opacity must be between 0 and 1."),
+        assert(onTargetClick == null || disposeOnTap != null,
+            "disposeOnTap is required if you're using onTargetClick"),
+        assert(disposeOnTap == null || onTargetClick != null,
+            "onTargetClick is required if you're using disposeOnTap"),
         assert(onBarrierClick == null || disableBarrierInteraction == false,
             "can't use onBarrierClick & disableBarrierInteraction property at same time");
 
@@ -379,21 +402,20 @@ class _ShowcaseState extends State<Showcase> {
   Size? rootWidgetSize;
   RenderBox? rootRenderObject;
 
-  ShowCaseWidgetState get showCaseWidgetState => ShowCaseWidget.of(context);
+  late final showCaseWidgetState = ShowCaseWidget.of(context);
 
   @override
   void initState() {
     super.initState();
-    if (mounted) {
-      initRootWidget();
-      recalculateRootWidgetSize();
-    }
+    initRootWidget();
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _enableShowcase = showCaseWidgetState.enableShowcase;
+
+    recalculateRootWidgetSize();
 
     if (_enableShowcase) {
       final size = MediaQuery.of(context).size;
@@ -473,6 +495,7 @@ class _ShowcaseState extends State<Showcase> {
 
   void recalculateRootWidgetSize() {
     ambiguate(WidgetsBinding.instance)?.addPostFrameCallback((_) {
+      if (!mounted) return;
       final rootWidget =
           context.findRootAncestorStateOfType<State<WidgetsApp>>();
       rootRenderObject = rootWidget?.context.findRenderObject() as RenderBox?;
@@ -557,7 +580,9 @@ class _ShowcaseState extends State<Showcase> {
             clipper: RRectClipper(
               area: _isScrollRunning ? Rect.zero : rectBound,
               isCircle: widget.targetShapeBorder is CircleBorder,
-              radius: widget.targetBorderRadius,
+              radius: _isScrollRunning
+                  ? BorderRadius.zero
+                  : widget.targetBorderRadius,
               overlayPadding:
                   _isScrollRunning ? EdgeInsets.zero : widget.targetPadding,
             ),
@@ -595,6 +620,8 @@ class _ShowcaseState extends State<Showcase> {
             shapeBorder: widget.targetShapeBorder,
             disableDefaultChildGestures: widget.disableDefaultTargetGestures,
           ),
+
+          /// bring back overlay widget from target widget
           ClipPath(
             clipper: RRectClipper(
               area: _isScrollRunning ? Rect.zero : rectBound,
@@ -604,6 +631,10 @@ class _ShowcaseState extends State<Showcase> {
                   _isScrollRunning ? EdgeInsets.zero : widget.targetPadding,
             ),
             child: ToolTipWidget(
+              showCaseContext: widget.showCaseContext,
+              buttonText: widget.buttonText,
+              showSkipButton: widget.showSkipButton,
+              showDoubleLayer: widget.showDoubleLayer,
               position: position,
               offset: offset,
               screenSize: screenSize,
@@ -616,9 +647,9 @@ class _ShowcaseState extends State<Showcase> {
               container: widget.container,
               tooltipBackgroundColor: widget.tooltipBackgroundColor,
               textColor: widget.textColor,
-              showArrow: widget.showArrow,
-              contentHeight: widget.height,
-              contentWidth: widget.width,
+              showArrow: false,
+              contentHeight: 10,
+              contentWidth: double.infinity,
               onTooltipTap: _getOnTooltipTap,
               tooltipPadding: widget.tooltipPadding,
               disableMovingAnimation: widget.disableMovingAnimation ??
@@ -636,6 +667,7 @@ class _ShowcaseState extends State<Showcase> {
               descriptionPadding: widget.descriptionPadding,
               titleTextDirection: widget.titleTextDirection,
               descriptionTextDirection: widget.descriptionTextDirection,
+              toolTipSlideEndDistance: widget.toolTipSlideEndDistance,
             ),
           ),
         ],
