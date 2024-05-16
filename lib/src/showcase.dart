@@ -33,6 +33,7 @@ import 'layout_overlays.dart';
 import 'shape_clipper.dart';
 import 'showcase_widget.dart';
 import 'tooltip_widget.dart';
+import 'widget/tooltip_slide_transition.dart';
 
 class Showcase extends StatefulWidget {
   /// A key that is unique across the entire app.
@@ -392,7 +393,7 @@ class Showcase extends StatefulWidget {
   State<Showcase> createState() => _ShowcaseState();
 }
 
-class _ShowcaseState extends State<Showcase> {
+class _ShowcaseState extends State<Showcase> with TickerProviderStateMixin {
   bool _showShowCase = false;
   bool _isScrollRunning = false;
   bool _isTooltipDismissed = false;
@@ -401,7 +402,9 @@ class _ShowcaseState extends State<Showcase> {
   GetPosition? position;
   Size? rootWidgetSize;
   RenderBox? rootRenderObject;
-
+  final defaultFocusAnimationDuration = const Duration(milliseconds: 1000);
+  late AnimationController _controller;
+  late CurvedAnimation _curvedAnimation;
   ShowCaseWidgetState? get showCaseWidgetState {
     try {
       return ShowCaseWidget.of(context);
@@ -413,7 +416,27 @@ class _ShowcaseState extends State<Showcase> {
   @override
   void initState() {
     super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    );
+
+    _curvedAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.ease,
+    )..addStatusListener((status) {
+        if (status == AnimationStatus.completed) {
+          _controller.reverse();
+        }
+      });
+    _controller.forward();
     initRootWidget();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
@@ -645,6 +668,11 @@ class _ShowcaseState extends State<Showcase> {
                   _isScrollRunning ? EdgeInsets.zero : widget.targetPadding,
             ),
             child: ToolTipWidget(
+              area: _isScrollRunning ? Rect.zero : rectBound,
+              radius: widget.targetBorderRadius,
+              isCircle: widget.targetShapeBorder is CircleBorder,
+              overlayPadding:
+                  _isScrollRunning ? EdgeInsets.zero : widget.targetPadding,
               showCaseContext: widget.showCaseContext,
               buttonText: widget.buttonText,
               showSkipButton: widget.showSkipButton,
@@ -701,7 +729,6 @@ class _TargetWidget extends StatelessWidget {
   final ShapeBorder shapeBorder;
   final BorderRadius? radius;
   final bool disableDefaultChildGestures;
-
   const _TargetWidget({
     Key? key,
     required this.offset,

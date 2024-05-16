@@ -24,6 +24,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:showcaseview/src/shape_clipper.dart';
 
 import '../showcaseview.dart';
 import 'enum.dart';
@@ -79,6 +80,10 @@ class ToolTipWidget extends StatefulWidget {
 
   /// to show double layers
   final bool showDoubleLayer;
+  final BorderRadius? radius;
+  final EdgeInsets overlayPadding;
+  final Rect area;
+  final bool isCircle;
   const ToolTipWidget({
     Key? key,
     required this.position,
@@ -116,6 +121,10 @@ class ToolTipWidget extends StatefulWidget {
     this.buttonText = 'Next',
     this.showSkipButton = true,
     this.showDoubleLayer = true,
+    this.radius,
+    this.overlayPadding = EdgeInsets.zero,
+    this.area = Rect.zero,
+    this.isCircle = false,
   }) : super(key: key);
 
   @override
@@ -136,6 +145,7 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
   late final Animation<double> fadeInFadeOut;
   late final AnimationController controller2;
   late final AnimationController controller;
+
   double tooltipWidth = 0;
   double tooltipScreenEdgePadding = 20;
   double tooltipTextPadding = 15;
@@ -279,6 +289,7 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
   @override
   void initState() {
     super.initState();
+
     // ambiguate(WidgetsBinding.instance)?.addPostFrameCallback((_) {
     //   if (widget.container != null &&
     //       _customContainerKey.currentContext != null &&
@@ -291,6 +302,7 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
     //     });
     //   }
     // });
+
     controller = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -501,10 +513,154 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
     if (widget.showDoubleLayer) {
       return Stack(
         clipBehavior: Clip.antiAlias,
-        children: [
+        children: <Widget>[
           Positioned(
             left: _getSpace(),
             top: contentY - 10,
+            child: Material(
+              color: Colors.transparent,
+              child: ScaleTransition(
+                alignment: Alignment.topCenter,
+                scale: fadeInFadeOut,
+                child: GestureDetector(
+                  onTap: widget.onTooltipTap,
+                  child: Transform.scale(
+                    alignment: Alignment.bottomLeft,
+                    scale: 1.2,
+                    child: Container(
+                      width: MediaQuery.of(context).size.width,
+                      height: MediaQuery.of(context).size.width,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0xFFF6FBFF).withOpacity(0.7),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: _getSpace(),
+            top: contentY,
+            child: Material(
+              color: Colors.transparent,
+              child: GestureDetector(
+                onTap: widget.onTooltipTap,
+                child: FadeTransition(
+                  opacity: fadeInFadeOut2,
+                  child: Transform.scale(
+                    scale: 1.0,
+                    alignment: Alignment.bottomLeft,
+                    child: Center(
+                      child: MeasureSize(
+                        onSizeChange: onSizeChange,
+                        child: Container(
+                          alignment: Alignment.center,
+                          width: MediaQuery.of(context).size.width,
+                          decoration: const BoxDecoration(
+                            borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(100),
+                                bottomLeft: Radius.circular(100)),
+                            color: AppColors.aliceBlue,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 50,
+                              vertical: 50,
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  widget.description ?? '',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: AppColors.black,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                  textAlign: TextAlign.start,
+                                ),
+                                const SizedBox(
+                                  height: 20,
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    widget.showSkipButton
+                                        ? Row(
+                                            children: [
+                                              IconButton(
+                                                onPressed: () =>
+                                                    ShowCaseWidget.of(widget
+                                                            .showCaseContext)
+                                                        .dismiss(),
+                                                icon: Text(
+                                                  'Skip',
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .buttonTextInActive
+                                                      ?.copyWith(
+                                                        fontWeight:
+                                                            FontWeight.w900,
+                                                        decoration:
+                                                            TextDecoration
+                                                                .underline,
+                                                        decorationColor:
+                                                            AppColors.steelTeal,
+                                                      ),
+                                                ),
+                                              ),
+                                              const SizedBox(
+                                                width: 30,
+                                              ),
+                                            ],
+                                          )
+                                        : const SizedBox.shrink(),
+                                    IconButton(
+                                      onPressed: () => ShowCaseWidget.of(
+                                              widget.showCaseContext)
+                                          .next(),
+                                      icon: Row(
+                                        children: [
+                                          Text(
+                                            widget.buttonText,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .buttonTextInActive
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w900,
+                                                ),
+                                          ),
+                                          const Icon(
+                                            Icons.arrow_forward_rounded,
+                                            color: AppColors.steelTeal,
+                                          )
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    } else {
+      return Stack(
+        children: [
+          Positioned(
+            top: contentY + 100,
+            left: _getSpace(),
             child: ScaleTransition(
               scale: _scaleAnimation,
               alignment: widget.scaleAnimationAlignment ??
@@ -514,56 +670,6 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
                   ),
               child: FractionalTranslation(
                 translation: Offset(0.0, contentFractionalOffset as double),
-                child: ToolTipSlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset.zero,
-                    end: Offset(
-                      0,
-                      widget.toolTipSlideEndDistance * contentOffsetMultiplier,
-                    ),
-                  ).animate(_movingAnimation),
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: Stack(
-                      alignment: isArrowUp
-                          ? Alignment.topLeft
-                          : _getLeft() == null
-                              ? Alignment.bottomRight
-                              : Alignment.bottomLeft,
-                      children: [
-                        GestureDetector(
-                          onTap: widget.onTooltipTap,
-                          child: Transform.scale(
-                            scale: 1.2,
-                            child: Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: AppColors.ghostWhite.withOpacity(0.7),
-                              ),
-                              width: MediaQuery.of(context).size.width,
-                              height: MediaQuery.of(context).size.width,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Positioned(
-            top: contentY,
-            left: _getSpace(),
-            child: ScaleTransition(
-              scale: _scaleAnimation,
-              alignment: widget.scaleAnimationAlignment ??
-                  Alignment(
-                    _getAlignmentX(),
-                    _getAlignmentY(),
-                  ),
-              child: FractionalTranslation(
-                translation: Offset(0.0, contentFractionalOffset),
                 child: ToolTipSlideTransition(
                   position: Tween<Offset>(
                     begin: Offset.zero,
@@ -586,150 +692,9 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
                           child: Transform.scale(
                             scale: 1.0,
                             child: Container(
-                              alignment: Alignment.center,
-                              width: MediaQuery.of(context).size.width,
-                              decoration: const BoxDecoration(
-                                borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(100),
-                                    bottomLeft: Radius.circular(100)),
-                                color: AppColors.aliceBlue,
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 50,
-                                  vertical: 50,
-                                ),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      widget.description ?? '',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(
-                                            color: AppColors.black,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                      textAlign: TextAlign.start,
-                                    ),
-                                    const SizedBox(
-                                      height: 20,
-                                    ),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
-                                      children: [
-                                        widget.showSkipButton
-                                            ? Row(
-                                                children: [
-                                                  IconButton(
-                                                    onPressed: () =>
-                                                        ShowCaseWidget.of(widget
-                                                                .showCaseContext)
-                                                            .dismiss(),
-                                                    icon: Text(
-                                                      'Skip',
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .buttonTextInActive
-                                                          ?.copyWith(
-                                                            fontWeight:
-                                                                FontWeight.w900,
-                                                            decoration:
-                                                                TextDecoration
-                                                                    .underline,
-                                                            decorationColor:
-                                                                AppColors
-                                                                    .steelTeal,
-                                                          ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(
-                                                    width: 30,
-                                                  ),
-                                                ],
-                                              )
-                                            : const SizedBox.shrink(),
-                                        IconButton(
-                                          onPressed: () => ShowCaseWidget.of(
-                                                  widget.showCaseContext)
-                                              .next(),
-                                          icon: Row(
-                                            children: [
-                                              Text(
-                                                widget.buttonText,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .buttonTextInActive
-                                                    ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.w900,
-                                                    ),
-                                              ),
-                                              const Icon(
-                                                Icons.arrow_forward_rounded,
-                                                color: AppColors.steelTeal,
-                                              )
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          )
-        ],
-      );
-    } else {
-      return Stack(
-        children: [
-          Positioned(
-            top: contentY + 15,
-            left: _getLeft(),
-            right: _getRight(),
-            child: ScaleTransition(
-              scale: _scaleAnimation,
-              alignment: widget.scaleAnimationAlignment ??
-                  Alignment(
-                    _getAlignmentX(),
-                    _getAlignmentY(),
-                  ),
-              child: FractionalTranslation(
-                translation: Offset(0.0, contentFractionalOffset as double),
-                child: ToolTipSlideTransition(
-                  position: Tween<Offset>(
-                    begin: Offset.zero,
-                    end: Offset(
-                      0,
-                      widget.toolTipSlideEndDistance * contentOffsetMultiplier,
-                    ),
-                  ).animate(_movingAnimation),
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: Stack(
-                      alignment: isArrowUp
-                          ? Alignment.topLeft
-                          : _getLeft() == null
-                              ? Alignment.bottomRight
-                              : Alignment.bottomLeft,
-                      children: [
-                        GestureDetector(
-                          onTap: widget.onTooltipTap,
-                          child: Transform.scale(
-                            scale: 1.2,
-                            child: Container(
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: widget.tooltipBackgroundColor,
+                                color: AppColors.ghostWhite.withOpacity(0.7),
                               ),
                               width: MediaQuery.of(context).size.width,
                               height: MediaQuery.of(context).size.width,
