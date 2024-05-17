@@ -668,11 +668,6 @@ class _ShowcaseState extends State<Showcase> with TickerProviderStateMixin {
                   _isScrollRunning ? EdgeInsets.zero : widget.targetPadding,
             ),
             child: ToolTipWidget(
-              area: _isScrollRunning ? Rect.zero : rectBound,
-              radius: widget.targetBorderRadius,
-              isCircle: widget.targetShapeBorder is CircleBorder,
-              overlayPadding:
-                  _isScrollRunning ? EdgeInsets.zero : widget.targetPadding,
               showCaseContext: widget.showCaseContext,
               buttonText: widget.buttonText,
               showSkipButton: widget.showSkipButton,

@@ -24,10 +24,8 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:showcaseview/src/shape_clipper.dart';
 
 import '../showcaseview.dart';
-import 'enum.dart';
 import 'extension.dart';
 import 'get_position.dart';
 import 'measure_size.dart';
@@ -80,10 +78,6 @@ class ToolTipWidget extends StatefulWidget {
 
   /// to show double layers
   final bool showDoubleLayer;
-  final BorderRadius? radius;
-  final EdgeInsets overlayPadding;
-  final Rect area;
-  final bool isCircle;
   const ToolTipWidget({
     Key? key,
     required this.position,
@@ -121,10 +115,6 @@ class ToolTipWidget extends StatefulWidget {
     this.buttonText = 'Next',
     this.showSkipButton = true,
     this.showDoubleLayer = true,
-    this.radius,
-    this.overlayPadding = EdgeInsets.zero,
-    this.area = Rect.zero,
-    this.isCircle = false,
   }) : super(key: key);
 
   @override
@@ -289,19 +279,6 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
   @override
   void initState() {
     super.initState();
-
-    // ambiguate(WidgetsBinding.instance)?.addPostFrameCallback((_) {
-    //   if (widget.container != null &&
-    //       _customContainerKey.currentContext != null &&
-    //       _customContainerKey.currentContext?.size != null) {
-    //     // TODO: Is it wise to call setState here? All it is doing is setting
-    //     // a value in ValueNotifier which does not require a setState to refresh anyway.
-    //     setState(() {
-    //       _customContainerWidth.value =
-    //           _customContainerKey.currentContext!.size!.width;
-    //     });
-    //   }
-    // });
 
     controller = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -510,6 +487,8 @@ class _ToolTipWidgetState extends State<ToolTipWidget>
         ],
       );
     }
+
+    /// show double layers in showcase
     if (widget.showDoubleLayer) {
       return Stack(
         clipBehavior: Clip.antiAlias,
